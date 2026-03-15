@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>寻物助手 | Lost & Found</title>
+    <link href="https://fonts.googleapis.com/css2?family=Silkscreen&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/lunar-javascript/lunar.js"></script>
+    <style>
+        :root {
+            --bg-color: #ffffff;
+            --card-bg: rgba(255, 255, 255, 0.9);
+            --border-color: #000000;
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        body, html {
+            height: 100%; margin: 0;
+            font-family: "Helvetica Neue", Helvetica, Arial, "PingFang SC", sans-serif;
+            background-color: var(--bg-color);
+            background-image: linear-gradient(#e5e5e5 1px, transparent 1px), linear-gradient(90deg, #e5e5e5 1px, transparent 1px);
+            background-size: 25px 25px;
+            display: flex; align-items: center; justify-content: center;
+            overflow: hidden;
+        }
+
+        #app { width: 100%; max-width: 420px; padding: 20px; position: relative; }
+
+        .lang-toggle {
+            position: absolute; top: -15px; right: 35px;
+            background: #000; color: #fff; border: 2px solid #000;
+            padding: 5px 15px; font-size: 11px; font-weight: 900;
+            cursor: pointer; z-index: 100; text-transform: uppercase;
+            box-shadow: 4px 4px 0px #888;
+        }
+        .lang-toggle:active { box-shadow: 0px 0px 0px; transform: translate(2px, 2px); }
+
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border: 3px solid var(--border-color);
+            padding: 45px 30px 35px;
+            box-shadow: 10px 10px 0px 0px rgba(0,0,0,1);
+            min-height: 400px;
+            display: flex; flex-direction: column; justify-content: center;
+        }
+
+        .step { display: none; animation: stepIn 0.3s ease-out; }
+        .step.active { display: block; }
+        @keyframes stepIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        h1 { font-size: 28px; font-weight: 900; margin: 0 0 25px; text-transform: uppercase; letter-spacing: -1px; line-height: 1.1; }
+
+        input {
+            width: 100%; border: 3px solid var(--border-color); background: #fff;
+            padding: 15px; font-size: 20px; font-family: inherit; outline: none;
+            margin: 25px 0; border-radius: 0; font-weight: bold;
+        }
+
+        .btn {
+            width: 100%; padding: 16px; border: 3px solid var(--border-color);
+            background: #fff; font-size: 14px; font-weight: 900; cursor: pointer;
+            text-transform: uppercase; transition: all 0.1s;
+            margin-top: 12px; border-radius: 0;
+            display: block; text-align: center; color: #000; text-decoration: none;
+        }
+        .btn:active { background: #000; color: #fff; transform: translate(3px, 3px); }
+        .btn-primary { background: #000; color: #fff; }
+
+        .btn-back {
+            background: none; border: none; font-size: 11px; text-decoration: underline;
+            margin-top: 25px; cursor: pointer; opacity: 0.6; width: 100%; font-weight: bold;
+        }
+
+        #loadingText {
+            font-family: 'Silkscreen', sans-serif;
+            font-size: 12px; text-transform: uppercase; line-height: 1.8;
+            margin-top: 30px; min-height: 3.6em; color: #000;
+        }
+        .pixel-loader {
+            width: 36px; height: 36px; border: 5px solid #000;
+            margin: 0 auto; animation: pixelSpin 0.8s steps(4) infinite;
+        }
+        @keyframes pixelSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+        .result-row { border-bottom: 2px solid #000; padding: 16px 0; }
+        .result-row:last-of-type { border-bottom: none; }
+        .result-label { font-size: 10px; font-weight: 900; text-transform: uppercase; color: #777; margin-bottom: 6px; display: block; }
+        .result-val { font-size: 17px; font-weight: 700; color: #000; }
+
+        /* 署名样式 */
+        .footer-credit { font-size: 11px; color: #888; margin-top: 30px; text-align: center; line-height: 1.6; padding: 0 10px; }
+        .footer-credit a { color: #000; text-decoration: underline; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div id="app">
+    <button class="lang-toggle" onclick="toggleLang()" id="langBtn">EN / 中文</button>
+    
+    <div class="card">
+        <!-- 1. Start -->
+        <div class="step active" id="step1">
+            <h1 id="t-title">东西丢了？<br><strong>我们一起找。</strong></h1>
+            <button class="btn btn-primary" onclick="nextStep(2)" id="t-startBtn">帮我找丢掉的东西</button>
+            <p class="footer-credit" id="t-disclaimer">注：可以用这个工具来找不限于你的眼镜、宠物、甚至丢掉的自我。答案基于经验推演，仅供参考。</p>
+        </div>
+
+        <!-- 2. Date -->
+        <div class="step" id="step2">
+            <h1 id="t-dateTitle">哪天不见的？</h1>
+            <input type="date" id="lostDate">
+            <button class="btn btn-primary" onclick="nextStep(3)" id="t-next1">下一步 / NEXT</button>
+            <button class="btn-back" onclick="nextStep(1)" id="t-back1">返回首页 / BACK</button>
+        </div>
+
+        <!-- 3. Time -->
+        <div class="step" id="step3">
+            <h1 id="t-timeTitle">大概什么时候？</h1>
+            <input type="time" id="lostTime">
+            <button class="btn btn-primary" onclick="nextStep(4)" id="t-next2">分析 / ANALYZE</button>
+            <button class="btn-back" onclick="nextStep(2)" id="t-back2">修改日期 / EDIT DATE</button>
+        </div>
+
+        <!-- 4. Intuition -->
+        <div class="step" id="step4">
+            <h1 id="t-q1Title">此刻的直觉是？</h1>
+            <button class="btn" onclick="nextStep(5)" id="t-q1a1">它在屋里，只是我没看见</button>
+            <button class="btn" onclick="nextStep(5)" id="t-q1a2">它好像已经离开我很久了</button>
+            <button class="btn" onclick="nextStep(5)" id="t-q1a3">我现在的脑子一片空白</button>
+        </div>
+
+        <!-- 5. Mood -->
+        <div class="step" id="step5">
+            <h1 id="t-q2Title">丢东西时的心情？</h1>
+            <button class="btn" onclick="showLoading()" id="t-q2a1">稀松平常</button>
+            <button class="btn" onclick="showLoading()" id="t-q2a2">特别专注或开心</button>
+            <button class="btn" onclick="showLoading()" id="t-q2a3">匆忙焦虑</button>
+        </div>
+
+        <!-- 6. Loading -->
+        <div class="step" id="stepLoading">
+            <div class="pixel-loader"></div>
+            <p id="loadingText">INITIALIZING...</p>
+        </div>
+
+        <!-- 7. Result -->
+        <div class="step" id="stepResult">
+            <h1 id="t-resTitle">找寻线索 / RESULTS</h1>
+            <div class="result-row">
+                <span class="result-label" id="l-dir">Direction / 建议方位</span>
+                <span class="result-val" id="res-dir"></span>
+            </div>
+            <div class="result-row">
+                <span class="result-label" id="l-clue">Clue / 关联提示</span>
+                <span class="result-val" id="res-person"></span>
+            </div>
+            <div class="result-row">
+                <span class="result-label" id="l-status">Status / 环境状态</span>
+                <span class="result-val" id="res-status"></span>
+            </div>
+            <div class="result-row">
+                <span class="result-label" id="l-range">Range / 距离范围</span>
+                <span class="result-val" id="res-dist"></span>
+            </div>
+            <button class="btn btn-primary" onclick="resetApp()" id="t-resetBtn" style="margin-top:25px;">重新找寻 / RE-SCAN</button>
+        </div>
+    </div>
+    <!-- 页脚署名 -->
+    <div id="t-footer" class="footer-credit"></div>
+</div>
+
+<script>
+    let currentLang = 'zh';
+
+    const raineIG = "https://www.instagram.com/rainrain.raine";
+    const peteIG = "https://www.instagram.com/peteransc";
+
+    const i18n = {
+        zh: {
+            title: "东西丢了？<br><strong>我们一起找。</strong>",
+            startBtn: "帮我找丢掉的东西",
+            dateTitle: "哪天不见的？",
+            timeTitle: "大概什么时候？",
+            q1Title: "此刻的直觉是？",
+            q2Title: "那时的心情如何？",
+            resTitle: "找寻线索 / RESULTS",
+            labelDir: "Direction / 建议方位",
+            labelClue: "Clue / 关联提示",
+            labelStatus: "Status / 环境状态",
+            labelRange: "Range / 距离范围",
+            next: "下一步 / NEXT",
+            back: "返回 / BACK",
+            analyze: "分析 / ANALYZE",
+            reset: "重新找寻 / RE-SCAN",
+            disclaimer: "注：可以用这个工具来找不限于你的眼镜、宠物、甚至丢掉的自我。答案仅供参考。",
+            loading: [
+                "正在回溯时空节点...",
+                "AI 正在极速烧脑...",
+                "正在咨询我二舅...",
+                "正在调取因果律底层数据...",
+                "正在询问失物被找回意愿...",
+                "计算完成！"
+            ],
+            footer: `找到了吗？欢迎和我们分享！ - <a href="${raineIG}" target="_blank">Raine</a> & <a href="${peteIG}" target="_blank">Pete</a>`,
+            q1: ["它在屋里，只是我没看见", "它好像已经离开我很久了", "我现在的脑子一片空白"],
+            q2: ["稀松平常", "特别专注或开心", "匆忙焦虑"],
+            results: {
+                dir: { '甲': '正东方', '乙': '正南方', '丙': '西南方', '辛': '西南方', '丁': '西北方', '戊': '正北方', '己': '东南方', '庚': '正西方', '壬': '东北方', '癸': '东北方' },
+                person: { '甲': '身边男性会有线索', '己': '身边男性会有线索', '乙': '身边女性会有线索', '庚': '身边女性会有线索', '丙': '可能与小孩或年轻人有关', '辛': '可能与小孩或年轻人有关', '丁': '近期接触过的亲友熟人', '壬': '近期接触过的亲友熟人', '戊': '应还在原地，不涉及外人', '癸': '应还在原地，不涉及外人' },
+                status: { '子': '在路旁、走廊或开阔处', '午': '在路旁、走廊或开阔处', '卯': '在路旁、走廊或开阔处', '酉': '在路旁、走廊或开阔处', '寅': '可能发生位移，找回需缘分', '申': '可能发生位移，找回需缘分', '巳': '可能发生位移，找回需缘分', '亥': '可能发生位移，找回需缘分', '辰': '未曾远去，就在隐蔽角落', '戌': '未曾远去，就在隐蔽角落', '丑': '未曾远去，就在隐蔽角落', '未': '未曾远去，就在隐蔽角落' },
+                dist: { '甲': '2.5公里内', '己': '2.5公里内', '乙': '距离遥远，或在异地', '庚': '距离遥远，或在异地', '丙': '5公里左右范围', '辛': '5公里左右范围', '丁': '1.5公里内', '壬': '1.5公里内', '戊': '就在原地，请反复翻找', '癸': '就在原地，请反复翻找' }
+            }
+        },
+        en: {
+            title: "LOST SOMETHING?<br><strong>LET'S FIND IT.</strong>",
+            startBtn: "HELP ME FIND IT",
+            dateTitle: "DATE OF LOSS",
+            timeTitle: "TIME OF LOSS",
+            q1Title: "YOUR INTUITION?",
+            q2Title: "YOUR MOOD THEN?",
+            resTitle: "ANALYSIS RESULTS",
+            labelDir: "Suggested Direction",
+            labelClue: "Association Clue",
+            labelStatus: "Current Status",
+            labelRange: "Search Range",
+            next: "NEXT STEP",
+            back: "BACK",
+            analyze: "ANALYZE NOW",
+            reset: "RE-SCAN",
+            disclaimer: "Note: For glasses, pets, or your lost soul. Based on empirical deduction. For reference only.",
+            loading: [
+                "BACKTRACKING...",
+                "AI IS OVERHEATING...",
+                "CONSULTING MY UNCLE...",
+                "QUERYING DATA...",
+                "ASKING ITEM'S WILL...",
+                "COMPLETE!"
+            ],
+            footer: `Found it? Share with us! - <a href="${raineIG}" target="_blank">Raine</a> & <a href="${peteIG}" target="_blank">Pete</a>`,
+            q1: ["In the room somewhere", "It has left me", "Complete blank"],
+            q2: ["Normal", "Focused / Happy", "Anxious"],
+            results: {
+                dir: { '甲': 'East', '乙': 'South', '丙': 'Southwest', '辛': 'Southwest', '丁': 'Northwest', '戊': 'North', '己': 'Southeast', '庚': 'West', '壬': 'Northeast', '癸': 'Northeast' },
+                person: { '甲': 'A male nearby', '己': 'A male nearby', '乙': 'A female nearby', '庚': 'A female nearby', '丙': 'A child/youth', '辛': 'A child/youth', '丁': 'A friend/relative', '壬': 'A friend/relative', '戊': 'Still nearby', '癸': 'Still nearby' },
+                status: { '子': 'Roadside / Open area', '午': 'Roadside / Open area', '卯': 'Roadside / Open area', '酉': 'Roadside / Open area', '寅': 'Moved away, needs luck', '申': 'Moved away, needs luck', '巳': 'Moved away, needs luck', '亥': 'Moved away, needs luck', '辰': 'In a hidden corner', '戌': 'In a hidden corner', '丑': 'In a hidden corner', '未': 'In a hidden corner' },
+                dist: { '甲': 'Within 2.5 km', '己': 'Within 2.5 km', '乙': 'Very far / Other city', '庚': 'Very far / Other city', '丙': 'Around 5 km radius', '辛': 'Around 5 km radius', '丁': 'Within 1.5 km', '壬': 'Within 1.5 km', '戊': 'Right here, keep searching!', '癸': 'Right here, keep searching!' }
+            }
+        }
+    };
+
+    function updateUI() {
+        const lang = i18n[currentLang];
+        document.getElementById('t-title').innerHTML = lang.title;
+        document.getElementById('t-startBtn').innerText = lang.startBtn;
+        document.getElementById('t-dateTitle').innerText = lang.dateTitle;
+        document.getElementById('t-timeTitle').innerText = lang.timeTitle;
+        document.getElementById('t-q1Title').innerText = lang.q1Title;
+        document.getElementById('t-q2Title').innerText = lang.q2Title;
+        document.getElementById('t-resTitle').innerText = lang.resTitle;
+        document.getElementById('t-next1').innerText = lang.next;
+        document.getElementById('t-next2').innerText = lang.analyze;
+        document.getElementById('t-back1').innerText = lang.back;
+        document.getElementById('t-back2').innerText = lang.back;
+        document.getElementById('t-resetBtn').innerText = lang.reset;
+        document.getElementById('t-disclaimer').innerText = lang.disclaimer;
+        document.getElementById('t-q1a1').innerText = lang.q1[0];
+        document.getElementById('t-q1a2').innerText = lang.q1[1];
+        document.getElementById('t-q1a3').innerText = lang.q1[2];
+        document.getElementById('t-q2a1').innerText = lang.q2[0];
+        document.getElementById('t-q2a2').innerText = lang.q2[1];
+        document.getElementById('t-q2a3').innerText = lang.q2[2];
+        
+        document.getElementById('l-dir').innerText = lang.labelDir;
+        document.getElementById('l-clue').innerText = lang.labelClue;
+        document.getElementById('l-status').innerText = lang.labelStatus;
+        document.getElementById('l-range').innerText = lang.labelRange;
+        
+        document.getElementById('t-footer').innerHTML = lang.footer;
+        
+        document.getElementById('langBtn').innerText = currentLang === 'zh' ? "EN / 中文" : "中文 / EN";
+    }
+
+    function toggleLang() {
+        currentLang = currentLang === 'zh' ? 'en' : 'zh';
+        updateUI();
+    }
+
+    function initDateTime() {
+        const now = new Date();
+        document.getElementById('lostDate').value = now.toISOString().split('T')[0];
+        document.getElementById('lostTime').value = now.toTimeString().slice(0,5);
+    }
+
+    function nextStep(stepNum) {
+        document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+        const target = document.getElementById('step' + stepNum);
+        if(target) target.classList.add('active');
+    }
+
+    function resetApp() {
+        initDateTime();
+        nextStep(1);
+    }
+
+    function showLoading() {
+        nextStep('Loading');
+        const phrases = i18n[currentLang].loading;
+        let i = 0;
+        const timer = setInterval(() => {
+            if(i < phrases.length) {
+                document.getElementById('loadingText').innerText = phrases[i];
+                i++;
+            } else {
+                clearInterval(timer);
+                calculate();
+            }
+        }, 900);
+    }
+
+    function calculate() {
+        const dateVal = document.getElementById('lostDate').value;
+        const timeVal = document.getElementById('lostTime').value;
+        if(!dateVal || !timeVal) return resetApp();
+
+        const solar = Solar.fromYmdHms(...dateVal.split('-'), ...timeVal.split(':'), 0);
+        const lunar = solar.getLunar();
+        const dayGan = lunar.getDayGan(); 
+        const timeZhi = lunar.getTimeZhi(); 
+
+        const res = i18n[currentLang].results;
+        document.getElementById('res-dir').innerText = res.dir[dayGan] || "---";
+        document.getElementById('res-person').innerText = res.person[dayGan] || "---";
+        document.getElementById('res-status').innerText = res.status[timeZhi] || "---";
+        document.getElementById('res-dist').innerText = res.dist[dayGan] || "---";
+
+        nextStep('Result');
+    }
+
+    initDateTime();
+    updateUI();
+</script>
+
+</body>
+</html>
